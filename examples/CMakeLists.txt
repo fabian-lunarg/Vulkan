@@ -141,6 +141,7 @@ set(EXAMPLES
 	raytracinggltf
 	raytracingintersection
 	raytracingreflections
+	raytracingreflectionsdesctemplates_inline_uniform
 	raytracingpositionfetch
 	raytracingsbtdata
 	raytracingshadows
