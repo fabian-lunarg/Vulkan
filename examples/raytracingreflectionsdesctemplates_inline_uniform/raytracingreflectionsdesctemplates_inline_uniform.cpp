@@ -15,6 +15,7 @@ class VulkanExample : public VulkanRaytracingSample
 {
 public:
         VkPhysicalDeviceInlineUniformBlockFeatures enabledInlineUniformBlockFeatures;
+        VkPhysicalDeviceDescriptorIndexingFeatures enabledDescriptorIndexingFeatures;
 
 	AccelerationStructure bottomLevelAS{};
 	AccelerationStructure topLevelAS{};
@@ -408,8 +409,8 @@ public:
 			vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 4),
 		};
 
-                std::vector<VkDescriptorBindingFlags> flags_array(setLayoutBindings.size(), 0);
-                flags_array[2] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT /*| VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT*/;
+                std::vector<VkDescriptorBindingFlags> flags_array(setLayoutBindings.size(), VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT);
+//                flags_array[2] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT /*| VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT*/;
 
                 VkDescriptorSetLayoutBindingFlagsCreateInfo extended_info = {};
                 extended_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
@@ -534,7 +535,7 @@ public:
 			VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
 
 			vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
-			vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, 1, &descriptorSet, 0, 0);
+			vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
 			/*
 				Dispatch the ray tracing commands
@@ -621,6 +622,9 @@ public:
 
 		enabledAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 		enabledAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
+
+                // set update after bind
+		enabledAccelerationStructureFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE;
 		enabledAccelerationStructureFeatures.pNext = &enabledRayTracingPipelineFeatures;
 
                 /*
@@ -630,7 +634,13 @@ public:
                 enabledInlineUniformBlockFeatures.inlineUniformBlock = VK_TRUE;
                 enabledInlineUniformBlockFeatures.descriptorBindingInlineUniformBlockUpdateAfterBind = VK_TRUE;
                 enabledInlineUniformBlockFeatures.pNext = &enabledAccelerationStructureFeatures;
-                deviceCreatepNextChain = &enabledInlineUniformBlockFeatures;
+
+                enabledDescriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+                enabledDescriptorIndexingFeatures.pNext = &enabledInlineUniformBlockFeatures;
+                // set update after bind
+                enabledDescriptorIndexingFeatures.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+                enabledDescriptorIndexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+                deviceCreatepNextChain = &enabledDescriptorIndexingFeatures;
 	}
 
 	void prepare()
