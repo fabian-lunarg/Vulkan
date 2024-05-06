@@ -64,6 +64,7 @@ public:
 		camera.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
 		camera.setTranslation(glm::vec3(0.0f, 0.5f, -2.0f));
 		enableExtensions();
+                enabledDeviceExtensions.push_back(VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME);
 //		enableVersion(1, 3);
 	}
 
@@ -72,6 +73,7 @@ public:
 		vkDestroyPipeline(device, pipeline, nullptr);
 		vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+                vkDestroyDescriptorUpdateTemplate(device, descriptor_template, nullptr);
 		deleteStorageImage();
 		deleteAccelerationStructure(bottomLevelAS);
 		deleteAccelerationStructure(topLevelAS);
@@ -305,6 +307,7 @@ public:
                 descriptorPoolInlineUniformBlockCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_INLINE_UNIFORM_BLOCK_CREATE_INFO_EXT;
                 descriptorPoolInlineUniformBlockCreateInfo.maxInlineUniformBlockBindings = 1;
                 descriptorPoolCreateInfo.pNext = &descriptorPoolInlineUniformBlockCreateInfo;
+                descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 
 		VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
 
@@ -405,7 +408,18 @@ public:
 			vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 4),
 		};
 
+                std::vector<VkDescriptorBindingFlags> flags_array(setLayoutBindings.size(), 0);
+                flags_array[2] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT /*| VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT*/;
+
+                VkDescriptorSetLayoutBindingFlagsCreateInfo extended_info = {};
+                extended_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+                extended_info.bindingCount = flags_array.size();
+                extended_info.pBindingFlags = flags_array.data();
+
 		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings);
+                descriptorSetLayoutCI.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+                descriptorSetLayoutCI.pNext = &extended_info;
+
 		VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayout));
 
 		VkPipelineLayoutCreateInfo pPipelineLayoutCI = vks::initializers::pipelineLayoutCreateInfo(&descriptorSetLayout, 1);
@@ -612,8 +626,9 @@ public:
                 /*
                         [POI] We also need to enable the inline uniform block feature (using the dedicated physical device structure)
                 */
-                enabledInlineUniformBlockFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INLINE_UNIFORM_BLOCK_FEATURES_EXT;
+                enabledInlineUniformBlockFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INLINE_UNIFORM_BLOCK_FEATURES;
                 enabledInlineUniformBlockFeatures.inlineUniformBlock = VK_TRUE;
+                enabledInlineUniformBlockFeatures.descriptorBindingInlineUniformBlockUpdateAfterBind = VK_TRUE;
                 enabledInlineUniformBlockFeatures.pNext = &enabledAccelerationStructureFeatures;
                 deviceCreatepNextChain = &enabledInlineUniformBlockFeatures;
 	}
@@ -653,10 +668,7 @@ public:
 		if (!paused || camera.updated)
                 {
                   updateUniformBuffers();
-                  vkDeviceWaitIdle(device);
-
                   vkUpdateDescriptorSetWithTemplate(device, descriptorSet, descriptor_template, &descriptorUpdateData);
-                  buildCommandBuffers();
                 }
 	}
 };
