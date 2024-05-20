@@ -3,7 +3,7 @@
 * 
 * A swap chain is a collection of framebuffers used for rendering and presentation to the windowing system
 *
-* Copyright (C) 2016-2023 by Sascha Willems - www.saschawillems.de
+* Copyright (C) 2016-2024 by Sascha Willems - www.saschawillems.de
 *
 * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 */
@@ -23,6 +23,8 @@ void VulkanSwapChain::initSurface(wl_display *display, wl_surface *window)
 void VulkanSwapChain::initSurface(xcb_connection_t* connection, xcb_window_t window)
 #elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 void VulkanSwapChain::initSurface(void* view)
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+void VulkanSwapChain::initSurface(CAMetalLayer* metalLayer)
 #elif (defined(_DIRECT2DISPLAY) || defined(VK_USE_PLATFORM_HEADLESS_EXT))
 void VulkanSwapChain::initSurface(uint32_t width, uint32_t height)
 #elif defined(VK_USE_PLATFORM_SCREEN_QNX)
@@ -57,6 +59,13 @@ void VulkanSwapChain::initSurface(screen_context_t screen_context, screen_window
 	surfaceCreateInfo.flags = 0;
 	surfaceCreateInfo.pView = view;
 	err = vkCreateMacOSSurfaceMVK(instance, &surfaceCreateInfo, NULL, &surface);
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+	VkMetalSurfaceCreateInfoEXT surfaceCreateInfo = {};
+	surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
+	surfaceCreateInfo.pNext = NULL;
+	surfaceCreateInfo.flags = 0;
+	surfaceCreateInfo.pLayer = metalLayer;
+	err = vkCreateMetalSurfaceEXT(instance, &surfaceCreateInfo, NULL, &surface);
 #elif defined(_DIRECT2DISPLAY)
 	createDirect2DisplaySurface(width, height);
 #elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
@@ -192,30 +201,19 @@ void VulkanSwapChain::initSurface(screen_context_t screen_context, screen_window
 	colorSpace = selectedFormat.colorSpace;
 }
 
-/**
-* Set instance, physical and logical device to use for the swapchain and get all required function pointers
-* 
-* @param instance Vulkan instance to use
-* @param physicalDevice Physical device used to query properties and formats relevant to the swapchain
-* @param device Logical representation of the device to create the swapchain for
-*
-*/
-void VulkanSwapChain::connect(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device)
+void VulkanSwapChain::setContext(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device)
 {
 	this->instance = instance;
 	this->physicalDevice = physicalDevice;
 	this->device = device;
 }
 
-/** 
-* Create the swapchain and get its images with given width and height
-* 
-* @param width Pointer to the width of the swapchain (may be adjusted to fit the requirements of the swapchain)
-* @param height Pointer to the height of the swapchain (may be adjusted to fit the requirements of the swapchain)
-* @param vsync (Optional) Can be used to force vsync-ed rendering (by using VK_PRESENT_MODE_FIFO_KHR as presentation mode)
-*/
 void VulkanSwapChain::create(uint32_t *width, uint32_t *height, bool vsync, bool fullscreen)
 {
+	assert(physicalDevice);
+	assert(device);
+	assert(instance);
+
 	// Store the current swap chain handle so we can use it later on to ease up recreation
 	VkSwapchainKHR oldSwapchain = swapChain;
 
@@ -275,7 +273,7 @@ void VulkanSwapChain::create(uint32_t *width, uint32_t *height, bool vsync, bool
 
 	// Determine the number of images
 	uint32_t desiredNumberOfSwapchainImages = surfCaps.minImageCount + 1;
-#if (defined(VK_USE_PLATFORM_MACOS_MVK) && defined(VK_EXAMPLE_XCODE_GENERATED))
+#if (defined(VK_USE_PLATFORM_MACOS_MVK) || defined(VK_USE_PLATFORM_METAL_EXT)) && defined(VK_EXAMPLE_XCODE_GENERATED)
 	// SRS - Work around known MoltenVK issue re 2x frame rate when vsync (VK_PRESENT_MODE_FIFO_KHR) enabled
 	struct utsname sysInfo;
 	uname(&sysInfo);
@@ -396,16 +394,6 @@ void VulkanSwapChain::create(uint32_t *width, uint32_t *height, bool vsync, bool
 	}
 }
 
-/** 
-* Acquires the next image in the swap chain
-*
-* @param presentCompleteSemaphore (Optional) Semaphore that is signaled when the image is ready for use
-* @param imageIndex Pointer to the image index that will be increased if the next image could be acquired
-*
-* @note The function will always wait until the next image has been acquired by setting timeout to UINT64_MAX
-*
-* @return VkResult of the image acquisition
-*/
 VkResult VulkanSwapChain::acquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t *imageIndex)
 {
 	// By setting timeout to UINT64_MAX we will always wait until the next image has been acquired or an actual error is thrown
@@ -413,15 +401,6 @@ VkResult VulkanSwapChain::acquireNextImage(VkSemaphore presentCompleteSemaphore,
 	return vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, presentCompleteSemaphore, (VkFence)nullptr, imageIndex);
 }
 
-/**
-* Queue an image for presentation
-*
-* @param queue Presentation queue for presenting the image
-* @param imageIndex Index of the swapchain image to queue for presentation
-* @param waitSemaphore (Optional) Semaphore that is waited on before the image is presented (only used if != VK_NULL_HANDLE)
-*
-* @return VkResult of the queue presentation
-*/
 VkResult VulkanSwapChain::queuePresent(VkQueue queue, uint32_t imageIndex, VkSemaphore waitSemaphore)
 {
 	VkPresentInfoKHR presentInfo = {};
@@ -440,9 +419,6 @@ VkResult VulkanSwapChain::queuePresent(VkQueue queue, uint32_t imageIndex, VkSem
 }
 
 
-/**
-* Destroy and free Vulkan resources used for the swapchain
-*/
 void VulkanSwapChain::cleanup()
 {
 	if (swapChain != VK_NULL_HANDLE)
