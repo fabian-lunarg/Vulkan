@@ -1,7 +1,7 @@
 /*
  * Vulkan examples debug wrapper
  *
- * Copyright (C) 2016-2023 by Sascha Willems - www.saschawillems.de
+ * Copyright (C) 2016-2025 by Sascha Willems - www.saschawillems.de
  *
  * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
  */
@@ -13,6 +13,9 @@ namespace vks
 {
 	namespace debug
 	{
+		bool logToFile{ false };
+		std::string logFileName{ "validation_output.txt" };
+
 		PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT;
 		PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT;
 		VkDebugUtilsMessengerEXT debugUtilsMessenger;
@@ -27,27 +30,35 @@ namespace vks
 			std::string prefix;
 
 			if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-#if defined(_WIN32)
-				prefix = "\033[32m" + prefix + "\033[0m";
-#endif
 				prefix = "VERBOSE: ";
+#if defined(_WIN32)
+				if (!logToFile) {
+					prefix = "\033[32m" + prefix + "\033[0m";
+				}
+#endif
 			}
 			else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
 				prefix = "INFO: ";
 #if defined(_WIN32)
-				prefix = "\033[36m" + prefix + "\033[0m";
+				if (!logToFile) {
+					prefix = "\033[36m" + prefix + "\033[0m";
+				}
 #endif
 			}
 			else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 				prefix = "WARNING: ";
 #if defined(_WIN32)
-				prefix = "\033[33m" + prefix + "\033[0m";
+				if (!logToFile) {
+					prefix = "\033[33m" + prefix + "\033[0m";
+				}
 #endif
 			}
 			else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 				prefix = "ERROR: ";
 #if defined(_WIN32)
-				prefix = "\033[31m" + prefix + "\033[0m";
+				if (!logToFile) {
+					prefix = "\033[31m" + prefix + "\033[0m";
+				}
 #endif
 			}
 
@@ -73,6 +84,9 @@ namespace vks
 			} else {
 				std::cout << debugMessage.str() << "\n\n";
 			}
+			if (logToFile) {
+				log(debugMessage.str());
+			}
 			fflush(stdout);
 #endif
 
@@ -89,6 +103,18 @@ namespace vks
 			debugUtilsMessengerCI.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 			debugUtilsMessengerCI.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
 			debugUtilsMessengerCI.pfnUserCallback = debugUtilsMessageCallback;
+		}
+
+		void log(std::string message)
+		{
+			if (logToFile) {
+				time_t timestamp;
+				time(&timestamp);				
+				std::ofstream logfile;
+				logfile.open(logFileName, std::ios_base::app);
+				logfile << strtok(ctime(&timestamp), "\n") << ": " << message << std::endl;
+				logfile.close();
+			}
 		}
 
 		void setupDebugging(VkInstance instance)

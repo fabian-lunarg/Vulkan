@@ -1,7 +1,7 @@
 /*
  * Vulkan examples debug wrapper
  *
- * Copyright (C) 2016-2023 by Sascha Willems - www.saschawillems.de
+ * Copyright (C) 2016-2025 by Sascha Willems - www.saschawillems.de
  *
  * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
  */
@@ -34,6 +34,9 @@ namespace vks
 {
 	namespace debug
 	{
+		extern bool logToFile;
+		extern std::string logFileName;
+
 		// Default debug callback
 		VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessageCallback(
 			VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -47,6 +50,7 @@ namespace vks
 		void freeDebugCallback(VkInstance instance);
 		// Used to populate a VkDebugUtilsMessengerCreateInfoEXT with our example messenger function and desired flags
 		void setupDebugingMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& debugUtilsMessengerCI);
+		void log(std::string message);
 	}
 
 	// Wrapper for the VK_EXT_debug_utils extension

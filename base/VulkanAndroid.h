@@ -1,7 +1,7 @@
 /*
 * Android Vulkan function pointer prototypes
 *
-* Copyright (C) 2016-2023 by Sascha Willems - www.saschawillems.de
+* Copyright (C) 2016-2025 by Sascha Willems - www.saschawillems.de
 *
 * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 */
@@ -28,16 +28,6 @@
 #include <android/configuration.h>
 #include <memory>
 #include <string>
-
-// Missing from the NDK
-namespace std
-{
-	template<typename T, typename... Args>
-	std::unique_ptr<T> make_unique(Args&&... args)
-	{
-		return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-	}
-}
 
 // Global reference to android application object
 extern android_app* androidApp;
@@ -154,6 +144,11 @@ extern PFN_vkCmdBeginQuery vkCmdBeginQuery;
 extern PFN_vkCmdEndQuery vkCmdEndQuery;
 extern PFN_vkCmdResetQueryPool vkCmdResetQueryPool;
 extern PFN_vkCmdCopyQueryPoolResults vkCmdCopyQueryPoolResults;
+extern PFN_vkGetPhysicalDeviceSparseImageFormatProperties vkGetPhysicalDeviceSparseImageFormatProperties;
+extern PFN_vkGetImageSparseMemoryRequirements vkGetImageSparseMemoryRequirements;
+extern PFN_vkQueueBindSparse vkQueueBindSparse;
+extern PFN_vkCmdBeginRendering vkCmdBeginRendering;
+extern PFN_vkCmdEndRendering vkCmdEndRendering;
 
 extern PFN_vkCreateAndroidSurfaceKHR vkCreateAndroidSurfaceKHR;
 extern PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
@@ -170,6 +165,8 @@ extern PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
 extern PFN_vkQueuePresentKHR vkQueuePresentKHR;
 
 extern PFN_vkResetCommandBuffer vkResetCommandBuffer;
+
+extern PFN_vkGetPhysicalDeviceImageFormatProperties vkGetPhysicalDeviceImageFormatProperties;
 
 namespace vks
 {

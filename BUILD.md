@@ -1,6 +1,6 @@
 # Building
 
-The repository contains everything required to compile and build the examples on Windows, Linux, Android and MacOS using a C++ compiler that supports at least C++11. All required dependencies are included. The project uses [CMake](https://cmake.org/) as the build system.
+The repository contains everything required to compile and build the examples on Windows, Linux, Android and MacOS using a C++ compiler that supports at least C++20. All required dependencies are included. The project uses [CMake](https://cmake.org/) as the build system, min. required version is CMake 3.10.0.
 
 ## General CMake options
 
@@ -32,9 +32,11 @@ Use the provided CMakeLists.txt with [CMake](https://cmake.org) to generate a bu
 
 ### <img src="./images/androidlogo.png" alt="" height="32px"> [Android](android/)
 
-Building on Android is done using the [Gradle Build Tool](https://gradle.org/):
+Building on Android is done using the [Gradle Build Tool](https://gradle.org/).
 
-If you want to build it through command line, set Android SDK/NDK by environment variable `ANDROID_SDK_ROOT`/`ANDROID_NDK_HOME`.
+**The recommended way** is building via [Android Studio](https://developer.android.com/studio). Simply open the project folder ```android```, build and after that you can select the sample you want to run from the project list.
+
+If you want to build it via the command line, set Android SDK/NDK by environment variable `ANDROID_SDK_ROOT`/`ANDROID_NDK_HOME`.
 
 On Linux execute:
 
@@ -47,8 +49,6 @@ This will download gradle locally, build all samples and output the apks to ```a
 On Windows execute ```gradlew.bat assembleDebug```.
 
 If you want to build and install on a connected device or emulator image, run ```gradle installDebug``` instead.
-
-If you want to build it through [Android Studio](https://developer.android.com/studio), open project folder ```android``` in Android Studio.
 
 ### <img src="./images/applelogo.png" alt="" height="32px"> macOS and iOS
 
@@ -63,12 +63,13 @@ Open **vulkan_sdk.dmg** and install the Vulkan SDK with *System Global Installat
 Install **libomp** from [homebrew](https://brew.sh) using:
 ```brew install libomp```
 
-Find the **libomp** path prefix using:
-```brew --prefix libomp```
-
-Use the **libomp** path prefix to adjust the path for ```-DOpenMP_omp_LIBRARY=``` in the cmake command below.
+Define the **libomp** path prefix using:
+```export LIBOMP_PREFIX=$(brew --prefix libomp)```
 
 Use [CMake](https://cmake.org) to generate a build configuration for Xcode or your preferred build method (e.g. Unix Makefiles or Ninja).
 
-Example of cmake generating for Xcode with **libomp** path defined for homebrew on Apple Silicon:
-```cmake -G "Xcode" -DOpenMP_omp_LIBRARY=/opt/homebrew/opt/libomp/lib/libomp.dylib```
+Example of cmake generating for Xcode with **libomp** library path defined:
+```cmake -G "Xcode" -DOpenMP_omp_LIBRARY=$LIBOMP_PREFIX/lib/libomp.dylib .```
+
+#### iOS
+Navigate to the [apple](apple/) folder and follow the instructions in [README\_MoltenVK_Examples.md](apple/README_MoltenVK_Examples.md)

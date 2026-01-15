@@ -234,3 +234,12 @@ data/textures/**
 data/README_asset_pack.md
 data/font*.*
 data/roboto*.*
+
+# Android Studio folders
+android/.idea/**
+
+libs/vulkan/*.so
+
+.vscode/*
+
+__pycache__**
