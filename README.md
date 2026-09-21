@@ -101,6 +101,10 @@ Vulkan consumes shaders in an intermediate representation called SPIR-V. This ma
 
     Vulkan 1.3 version of the basic and verbose example for getting a colored triangle rendered to the screen. This makes use of features like dynamic rendering simplifying api usage.
 
+- [Blended triangles in a load render pass](examples/triangle_loadblend/)
+
+    Variant of the basic triangle that draws two overlapping triangles with additive blending into a render pass that loads its color attachment instead of clearing it. Meant as a repro case for capture and replay tools: the second draw must show the first one applied exactly once.
+
 - [Pipelines](examples/pipelines/)
 
     Using pipeline state objects (pso) that bake state information (rasterization states, culling modes, etc.) along with the shaders into a single object, making it easy for an implementation to optimize usage (compared to OpenGL's dynamic state machine). Also demonstrates the use of pipeline derivatives.

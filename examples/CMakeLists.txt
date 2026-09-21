@@ -181,6 +181,7 @@ set(EXAMPLES
 	texturesparseresidency
 	timelinesemaphore
 	triangle
+	triangle_loadblend
 	trianglevulkan13
 	variablerateshading
 	vertexattributes
