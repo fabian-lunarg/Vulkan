@@ -149,6 +149,10 @@ Vulkan consumes shaders in an intermediate representation called SPIR-V. This ma
 
     Uses input attachments to read framebuffer contents from a previous sub pass at the same pixel position within a single render pass. This can be used for basic post processing or image composition ([blog entry](https://www.saschawillems.de/tutorials/vulkan/input_attachments_subpasses)).
 
+- [Input attachments with a partial composition](examples/inputattachments_partial/)
+
+    Variant of the input attachments example whose second sub pass composites the left half of the screen before compositing all of it. Meant as a repro case for capture and replay tools: the first composition only covers part of the swapchain attachment, so a dump taken there still shows what that attachment held when the sub pass began.
+
 - [Sub passes](examples/subpasses/)
 
     Advanced example that uses sub passes and input attachments to write and read back data from framebuffer attachments (same location only) in single render pass. This is used to implement deferred render composition with added forward transparency in a single pass.

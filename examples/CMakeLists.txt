@@ -128,6 +128,7 @@ set(EXAMPLES
 	indirectdraw
 	inlineuniformblocks
 	inputattachments
+	inputattachments_partial
 	instancing
 	meshshader
 	multisampling
