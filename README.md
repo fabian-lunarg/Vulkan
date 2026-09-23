@@ -105,6 +105,18 @@ Vulkan consumes shaders in an intermediate representation called SPIR-V. This ma
 
     Variant of the basic triangle that draws two overlapping triangles with additive blending into a render pass that loads its color attachment instead of clearing it. Meant as a repro case for capture and replay tools: the second draw must show the first one applied exactly once.
 
+- [Blended triangles across three command buffers](examples/triangle_loadblend_multicb/)
+
+    Variant of the blended triangles example that splits the frame into three command buffers in one submit: the first clears the swapchain image, the next two each load it and blend the same triangle on top. Meant as a repro case for capture and replay tools: the second draw must show the first one applied exactly once, also across a command buffer boundary.
+
+- [Blended triangles with an acceleration structure rebuild](examples/triangle_loadblend_as/)
+
+    Variant of the blended triangles example whose command buffer rebuilds a per-frame top level acceleration structure with a moving occluder quad before the draws, which ray query it. Meant as a repro case for capture and replay tools: work recorded before the first draw has to run, or the draws see a stale acceleration structure.
+
+- [Blended triangles in a render pass with two sub passes](examples/triangle_loadblend_subpasses/)
+
+    Variant of the blended triangles example that records a render pass with two sub passes twice in one command buffer, one draw per sub pass. Meant as a repro case for capture and replay tools that split a command buffer between draws, so that a split can end past the end of a multi sub pass render pass.
+
 - [Pipelines](examples/pipelines/)
 
     Using pipeline state objects (pso) that bake state information (rasterization states, culling modes, etc.) along with the shaders into a single object, making it easy for an implementation to optimize usage (compared to OpenGL's dynamic state machine). Also demonstrates the use of pipeline derivatives.
@@ -232,6 +244,10 @@ These samples show how implement different features of the [glTF 2.0 3D format](
 - [Multi threaded command buffer generation](examples/multithreading/)
 
     Multi threaded parallel command buffer generation. Instead of prebuilding and reusing the same command buffers this sample uses multiple hardware threads to demonstrate parallel per-frame recreation of secondary command buffers that are executed and submitted in a primary buffer once all threads have finished.
+
+- [Multi threaded command buffer generation with several draws per secondary](examples/multithreading_multidraw/)
+
+    Variant of the multi threaded example with two objects per thread and four draws per secondary command buffer. Meant as a repro case for capture and replay tools: a dump can target a draw that is not the last one in its secondary.
 
 - [Instancing](examples/instancing/)
 

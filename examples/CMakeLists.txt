@@ -134,6 +134,7 @@ set(EXAMPLES
 	multisampling
 	multisamplingalphatocoverage
 	multithreading
+	multithreading_multidraw
 	multiview
 	negativeviewportheight	
 	occlusionquery
@@ -183,6 +184,9 @@ set(EXAMPLES
 	timelinesemaphore
 	triangle
 	triangle_loadblend
+	triangle_loadblend_as
+	triangle_loadblend_multicb
+	triangle_loadblend_subpasses
 	trianglevulkan13
 	variablerateshading
 	vertexattributes
