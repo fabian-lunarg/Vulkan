@@ -108,6 +108,9 @@ public:
 
 	VkCommandPool commandPool{ VK_NULL_HANDLE };
 	std::array<VkCommandBuffer, MAX_CONCURRENT_FRAMES> commandBuffers{};
+	// Render pass that clears the colour attachment, and the command buffers that run it first in each frame
+	VkRenderPass clearRenderPass{ VK_NULL_HANDLE };
+	std::array<VkCommandBuffer, MAX_CONCURRENT_FRAMES> clearCommandBuffers{};
 	std::array<VkFence, MAX_CONCURRENT_FRAMES> waitFences{};
 
 	// To select the correct sync and command objects, we need to keep track of the current frame
@@ -166,6 +169,7 @@ public:
 		// Note: Inherited destructor cleans up resources stored in base class
 		if (device) {
 			vkDestroyPipeline(device, pipeline, nullptr);
+			vkDestroyRenderPass(device, clearRenderPass, nullptr);
 			vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 			vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 			vkDestroyBuffer(device, vertices.buffer, nullptr);
@@ -428,6 +432,7 @@ public:
 		// Allocate one command buffer per max. concurrent frame from above pool
 		VkCommandBufferAllocateInfo cmdBufAllocateInfo = vks::initializers::commandBufferAllocateInfo(commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, MAX_CONCURRENT_FRAMES);
 		VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, commandBuffers.data()));
+		VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, clearCommandBuffers.data()));
 	}
 
 	// Prepare vertex and index buffers for an indexed triangle
@@ -853,6 +858,13 @@ public:
 		renderPassCI.dependencyCount = static_cast<uint32_t>(dependencies.size()); // Number of subpass dependencies
 		renderPassCI.pDependencies = dependencies.data();                          // Subpass dependencies used by the render pass
 		VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassCI, nullptr, &renderPass));
+
+		// A second render pass, compatible with the first so it shares the framebuffers, that clears the
+		// colour attachment instead of loading it. The clearing command buffer of each frame uses it, so the
+		// load render pass never reads undefined swapchain contents.
+		attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassCI, nullptr, &clearRenderPass));
 	}
 
 	// Vulkan loads its shaders from an immediate binary representation called SPIR-V
@@ -1192,6 +1204,7 @@ public:
 		// For basic command buffers (like in this sample), recording is so fast that there is no need to offload this
 
 		vkResetCommandBuffer(commandBuffers[currentFrame], 0);
+		vkResetCommandBuffer(clearCommandBuffers[currentFrame], 0);
 
 		VkCommandBufferBeginInfo cmdBufInfo{};
 		cmdBufInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1199,7 +1212,7 @@ public:
 		// Set clear values for all framebuffer attachments with loadOp set to clear
 		// We use two attachments (color and depth) that are cleared at the start of the subpass and as such we need to set clear values for both
 		VkClearValue clearValues[2]{};
-		clearValues[0].color = { { 0.0f, 0.0f, 0.2f, 1.0f } };
+		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 		clearValues[1].depthStencil = { 1.0f, 0 };
 
 		VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -1215,6 +1228,16 @@ public:
 		renderPassBeginInfo.framebuffer = frameBuffers[imageIndex];
 
 		const VkCommandBuffer commandBuffer = commandBuffers[currentFrame];
+		// A separate command buffer clears the swapchain image to black. The load render pass then starts from
+		// known contents written outside its own command buffer, which a dump of that command buffer must keep.
+		const VkCommandBuffer clearCommandBuffer = clearCommandBuffers[currentFrame];
+		VK_CHECK_RESULT(vkBeginCommandBuffer(clearCommandBuffer, &cmdBufInfo));
+		renderPassBeginInfo.renderPass = clearRenderPass;
+		vkCmdBeginRenderPass(clearCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdEndRenderPass(clearCommandBuffer);
+		VK_CHECK_RESULT(vkEndCommandBuffer(clearCommandBuffer));
+		renderPassBeginInfo.renderPass = renderPass;
+
 		VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufInfo));
 
 		recordTopLevelBuild(commandBuffer);
@@ -1270,8 +1293,9 @@ public:
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submitInfo.pWaitDstStageMask = &waitStageMask;      // Pointer to the list of pipeline stages that the semaphore waits will occur at
-		submitInfo.pCommandBuffers = &commandBuffer;		// Command buffers(s) to execute in this batch (submission)
-		submitInfo.commandBufferCount = 1;                  // We submit a single command buffer
+		const std::array<VkCommandBuffer, 2> submitCommandBuffers{ clearCommandBuffer, commandBuffer };
+		submitInfo.pCommandBuffers = submitCommandBuffers.data();	// Command buffers(s) to execute in this batch (submission)
+		submitInfo.commandBufferCount = static_cast<uint32_t>(submitCommandBuffers.size());
 
 		// Semaphore to wait upon before the submitted command buffer starts executing
 		submitInfo.pWaitSemaphores = &presentCompleteSemaphores[currentFrame];
